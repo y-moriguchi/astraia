@@ -12,9 +12,12 @@
 	function isArray(obj) {
 		return Object.prototype.toString.call(obj) === '[object Array]';
 	}
+	function isObject(obj) {
+		return typeof obj === "object" && obj !== null;
+	}
 	function isEqual(obj1, obj2) {
 		var i;
-		if(typeof obj1 === "object" && typeof obj2 === "object") {
+		if(isObject(obj1) && typeof isObject(obj2)) {
 			for(i in obj1) {
 				if(obj1.hasOwnProperty(i)) {
 					if(!isEqual(obj1[i], obj2[i])) {
@@ -42,7 +45,7 @@
 			for(i = 0; i < obj.length; i++) {
 				res[i] = deepCopy(obj[i]);
 			}
-		} else if(typeof obj === "object") {
+		} else if(isObject(obj)) {
 			res = {};
 			for(i in obj) {
 				if(obj.hasOwnProperty(i)) {
@@ -56,7 +59,7 @@
 	}
 	function matchTree(ptn, obj, memory) {
 		var i;
-		if(typeof ptn === "object" && typeof ptn.test !== "function") {
+		if(typeof ptn !== "function") {
 			for(i in ptn) {
 				if(ptn.hasOwnProperty(i)) {
 					if(!matchTree(ptn[i], obj[i], memory)) {
@@ -66,13 +69,13 @@
 			}
 			return true;
 		} else {
-			return ptn.test(obj, memory);
+			return ptn(obj, memory);
 		}
 	}
 	function scanPattern(ptn, obj, action) {
 		var i,
 			scanned;
-		if(typeof obj === "object" && typeof ptn === "object") {
+		if(isObject(obj)) {
 			for(i in obj) {
 				if(obj.hasOwnProperty(i)) {
 					if(matchTree(ptn, obj[i], {})) {
@@ -89,45 +92,7 @@
 		}
 	}
 	Astraia = (function() {
-		var me,
-			predAny,
-			predNumber,
-			predMemory;
-		function PredEqv(obj) {
-			this.eqv = obj;
-		}
-		function PredMemory(name) {
-			this.name = name;
-		}
-		function PredRefer(name) {
-			this.name = name;
-		}
-		PredEqv.prototype = {
-			test: function(obj) {
-				return this.eqv === obj;
-			}
-		};
-		PredMemory.prototype = {
-			test: function(obj, memory) {
-				memory[this.name] = deepCopy(obj);
-				return true;
-			}
-		};
-		PredRefer.prototype = {
-			test: function(obj, memory) {
-				return isEqual(obj, memory[this.name]);
-			}
-		};
-		predAny = {
-			test: function(obj) {
-				return obj !== undef && obj !== null;
-			}
-		};
-		predNumber = {
-			test: function(obj) {
-				return typeof obj === "number";
-			}
-		};
+		var me;
 		me = {
 			scanOnce: function(rules, source) {
 				var i,
@@ -150,19 +115,86 @@
 			scan: function(rules, source) {
 				var result,
 					resultOld;
-				for(resultOld = source; (result = me.scanOnce(rules, resultOld)).replaced; resultOld = result.result) {}
+				for(resultOld = source; (result = me.scanOnce(rules, resultOld)).replaced; resultOld = result.result) {
+					if(isEqual(result.result, resultOld)) {
+						break;
+					}
+				}
 				return resultOld;
 			},
-			eqv: function(obj) {
-				return new PredEqv(obj);
+			eqv: function(eqv) {
+				return function(obj) {
+					return eqv === obj;
+				};
 			},
-			any: predAny,
-			number: predNumber,
+			equal: function(eqv) {
+				return function(obj) {
+					return isEqual(eqv, obj);
+				};
+			},
+			any: function(obj) {
+				return obj !== undef && obj !== null;
+			},
+			number: function(obj) {
+				return typeof obj === "number";
+			},
+			string: function(obj) {
+				return typeof obj === "string";
+			},
+			object: function(obj) {
+				return typeof obj === "object" && obj !== null && !isArray(obj);
+			},
+			array: function(obj) {
+				return isArray(obj);
+			},
+			regex: function(regex) {
+				return function(obj) {
+					return typeof obj === "string" && regex.test(obj);
+				};
+			},
+			range: function(minimum, maximum) {
+				return function(obj) {
+					return typeof obj === "number" && obj >= minimum && obj <= maximum;
+				};
+			},
+			all: function(pred) {
+				return function(obj) {
+					var i;
+					if(!isArray(obj)) {
+						return false;
+					}
+					for(i = 0; i < obj.length; i++) {
+						if(!pred(obj[i])) {
+							return false;
+						}
+					}
+					return true;
+				};
+			},
+			exists: function(pred) {
+				return function(obj) {
+					var i;
+					if(!isArray(obj)) {
+						return false;
+					}
+					for(i = 0; i < obj.length; i++) {
+						if(pred(obj[i])) {
+							return true;
+						}
+					}
+					return false;
+				};
+			},
 			memory: function(name) {
-				return new PredMemory(name);
+				return function(obj, memory) {
+					memory[name] = deepCopy(obj);
+					return true;
+				};
 			},
 			refer: function(name) {
-				return new PredRefer(name);
+				return function(obj, memory) {
+					return isEqual(obj, memory[name]);
+				};
 			}
 		};
 		return me;
