@@ -9,27 +9,50 @@
 (function(root) {
     var undef = void 0,
         Astraia;
+
     function isArray(obj) {
         return Object.prototype.toString.call(obj) === '[object Array]';
     }
+
     function isObject(obj) {
         return typeof obj === "object" && obj !== null;
     }
+
     function isEqual(obj1, obj2) {
-        var i;
-        if(isObject(obj1) && typeof isObject(obj2)) {
-            for(i in obj1) {
-                if(obj1.hasOwnProperty(i)) {
+        var i,
+            result1,
+            result2;
+
+        if(isArray(obj1) && isArray(obj2)) {
+            if(obj1.length !== obj2.length) {
+                return false;
+            } else {
+                for(i = 0; i < obj1.length; i++) {
                     if(!isEqual(obj1[i], obj2[i])) {
                         return false;
                     }
                 }
+                return true;
+            }
+        } else if(isObject(obj1) && isObject(obj2)) {
+            result1 = [];
+            result2 = [];
+            for(i in obj1) {
+                if(obj1.hasOwnProperty(i)) {
+                    result1.push(i);
+                }
             }
             for(i in obj2) {
                 if(obj2.hasOwnProperty(i)) {
-                    if(!isEqual(obj2[i], obj1[i])) {
-                        return false;
-                    }
+                    result2.push(i);
+                }
+            }
+            if(!isEqual(result1, result2)) {
+                return false;
+            }
+            for(i = 0; i < result1.length; i++) {
+                if(!isEqual(obj1[result1[i]], obj2[result1[i]])) {
+                    return false;
                 }
             }
             return true;
@@ -37,9 +60,11 @@
             return obj1 === obj2;
         }
     }
+
     function deepCopy(obj) {
         var i,
             res;
+
         if(isArray(obj)) {
             res = [];
             for(i = 0; i < obj.length; i++) {
@@ -57,8 +82,10 @@
         }
         return res;
     }
+
     function matchTree(ptn, obj, memory) {
         var i;
+
         if(typeof ptn === "function") {
             return ptn(obj, memory);
         } else if(isObject(ptn)) {
@@ -74,9 +101,11 @@
             return ptn === obj;
         }
     }
+
     function scanPattern(ptn, obj, action) {
         var i,
             scanned;
+
         if(isObject(obj)) {
             for(i in obj) {
                 if(obj.hasOwnProperty(i)) {
@@ -93,8 +122,10 @@
             return false;
         }
     }
+
     Astraia = (function() {
         var me;
+
         me = {
             scanOnce: function(rules, source) {
                 var i,
@@ -114,6 +145,7 @@
                     replaced: false
                 };
             },
+
             /**
              * @class Astraia
              * scans and replaces the object by the given rule.
@@ -127,11 +159,11 @@
              *     pattern: {
              *       "type": A.eqv("add"),
              *       "left": A.number,
-              *       "right": A.number
+             *       "right": A.number
              *     },
-              *     action: function(obj) {
+             *     action: function(obj) {
              *       return obj.left + obj.right;
-              *     }
+             *     }
              * }, {
              *     pattern: {
              *       "type": A.eqv("sub"),
@@ -169,6 +201,7 @@
                 }
                 return resultOld;
             },
+
             /**
              * @class Astraia
              * A placeholder which a value is equal to the given value.
@@ -184,6 +217,7 @@
                     return eqv === obj;
                 };
             },
+
             /**
              * @class Astraia
              * A placeholder which an object is equal to the given object.  
@@ -204,6 +238,7 @@
                     return isEqual(eqv, obj);
                 };
             },
+
             /**
              * @class Astraia
              * A placeholder which a value is not null or undefined.
@@ -216,6 +251,7 @@
             any: function(obj) {
                 return obj !== undef && obj !== null;
             },
+
             /**
              * @class Astraia
              * A placeholder which a value is a number.
@@ -228,6 +264,7 @@
             number: function(obj) {
                 return typeof obj === "number";
             },
+
             /**
              * @class Astraia
              * A placeholder which a value is a string.
@@ -240,6 +277,7 @@
             string: function(obj) {
                 return typeof obj === "string";
             },
+
             /**
              * @class Astraia
              * A placeholder which a value is an object and is not an array.
@@ -252,6 +290,7 @@
             object: function(obj) {
                 return typeof obj === "object" && obj !== null && !isArray(obj);
             },
+
             /**
              * @class Astraia
              * A placeholder which a value is an array.
@@ -264,6 +303,7 @@
             array: function(obj) {
                 return isArray(obj);
             },
+
             /**
              * @class Astraia
              * A placeholder which a value is matched to the given regex.
@@ -279,6 +319,7 @@
                     return typeof obj === "string" && regex.test(obj);
                 };
             },
+
             /**
              * @class Astraia
              * A placeholder which a value is in the given range.
@@ -295,6 +336,7 @@
                     return typeof obj === "number" && obj >= minimum && obj <= maximum;
                 };
             },
+
             /**
              * @class Astraia
              * A placeholder which all elements of an array are fulfilled by the given predicate.
@@ -319,6 +361,7 @@
                     return true;
                 };
             },
+
             /**
              * @class Astraia
              * A placeholder which one of the elements of an array is fulfilled by the given predicate.
@@ -343,6 +386,7 @@
                     return false;
                 };
             },
+
             /**
              * @class Astraia
              * A placeholder which memorize a value.
@@ -359,6 +403,7 @@
                     return true;
                 };
             },
+
             /**
              * @class Astraia
              * A placeholder which a value is equals to the memorized value.  
@@ -386,3 +431,4 @@
         root["Astraia"] = root["A"] = Astraia;
     }
 })(this);
+
